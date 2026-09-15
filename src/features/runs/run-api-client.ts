@@ -2,10 +2,16 @@ import { z } from "zod";
 
 import {
   apiErrorSchema,
+  approveRunRequestSchema,
+  approveRunResponseSchema,
   createRunRequestSchema,
   createRunResponseSchema,
+  exportRunRequestSchema,
+  exportRunResponseSchema,
   getRunResponseSchema,
   runSseEventSchema,
+  unlockExportRequestSchema,
+  unlockExportResponseSchema,
 } from "@/schemas/api";
 
 export type CreateRunInput = z.infer<typeof createRunRequestSchema>;
@@ -60,6 +66,51 @@ export async function getRun(runId: string): Promise<RunReport> {
     throwApiError(body);
   }
   return getRunResponseSchema.parse(body);
+}
+
+export async function approveRun(runId: string): Promise<z.infer<typeof approveRunResponseSchema>> {
+  const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/approve`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(approveRunRequestSchema.parse({
+      acknowledgmentVersion: "creator-brief-review-v1",
+      acknowledged: true,
+    })),
+  });
+  const body = await parseResponse(response);
+  if (!response.ok) {
+    throwApiError(body);
+  }
+  return approveRunResponseSchema.parse(body);
+}
+
+export async function unlockExport(code: string): Promise<z.infer<typeof unlockExportResponseSchema>> {
+  const response = await fetch("/api/demo/unlock-export", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(unlockExportRequestSchema.parse({ code })),
+  });
+  const body = await parseResponse(response);
+  if (!response.ok) {
+    throwApiError(body);
+  }
+  return unlockExportResponseSchema.parse(body);
+}
+
+export async function exportRun(
+  runId: string,
+  idempotencyKey: string,
+): Promise<z.infer<typeof exportRunResponseSchema>> {
+  const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/export`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(exportRunRequestSchema.parse({ idempotencyKey })),
+  });
+  const body = await parseResponse(response);
+  if (!response.ok) {
+    throwApiError(body);
+  }
+  return exportRunResponseSchema.parse(body);
 }
 
 type RunEventConnectionOptions = {

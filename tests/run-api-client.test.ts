@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { connectRunEvents } from "../src/features/runs/run-api-client";
+import { approveRun, connectRunEvents, exportRun, unlockExport } from "../src/features/runs/run-api-client";
 
 type MessageHandler = ((message: MessageEvent<string>) => void) | null;
 
@@ -9,7 +9,7 @@ class FakeEventSource {
   onmessage: MessageHandler = null;
   closed = false;
 
-  constructor(_url: string) {
+  constructor() {
     FakeEventSource.instance = this;
   }
 
@@ -59,5 +59,45 @@ describe("run event client", () => {
     source!.emit({ type: "report.ready", sequence: 0, runId: "6c4c1e99-7272-4d07-8382-dca1649112a9", status: "awaiting_approval", at: "2026-09-15T12:01:00.000Z" });
 
     expect(source!.closed).toBe(true);
+  });
+});
+
+describe("approval and export client", () => {
+  const runId = "6c4c1e99-7272-4d07-8382-dca1649112a9";
+  const idempotencyKey = "ab9ae5e9-d80e-49d4-9ae7-4730b5c1ca6c";
+
+  it("sends the documented approval, owner unlock, and idempotent export requests", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        approvalId: "58a75de6-9ca4-47f5-a8fc-0cf9be2140e7",
+        status: "awaiting_approval",
+        approvedAt: "2026-09-15T12:03:00.000Z",
+        exportEligible: false,
+      })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ unlockedUntil: "2026-09-15T12:18:00.000Z" })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        exportId: "bd5071a8-0c9f-455e-bf5f-d80e97e7e0c0",
+        spreadsheetId: "sheet-1",
+        range: "A2:K4",
+        exportedAt: "2026-09-15T12:04:00.000Z",
+      })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await approveRun(runId);
+    await unlockExport("presenter-code");
+    await exportRun(runId, idempotencyKey);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, `/api/runs/${runId}/approve`, expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ acknowledgmentVersion: "creator-brief-review-v1", acknowledged: true }),
+    }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/demo/unlock-export", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ code: "presenter-code" }),
+    }));
+    expect(fetchMock).toHaveBeenNthCalledWith(3, `/api/runs/${runId}/export`, expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ idempotencyKey }),
+    }));
   });
 });

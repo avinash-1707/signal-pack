@@ -20,7 +20,7 @@ If a change alters a product, security, retention, contract, or deployment decis
 | Unit 2: Evidence and safe retrieval core | Done (external checks pending) | 2026-09-15 | Safe retrieval, evidence normalization, tool-trace persistence, retry handling, and the fixture path are implemented. Live Brave and public-site checks await Unit 0 credentials. |
 | Unit 3: Research and brief compilation | Done (external checks pending) | 2026-09-15 | Bounded OpenRouter tool loop, strict brief compilation, validation/repair, and atomic approval-ready persistence are fixture-tested. Live OpenRouter verification awaits Unit 0 credentials. |
 | Unit 4: Research desk UI and live events | Done | 2026-09-15 | Fixture-first research desk, owner-scoped SSE snapshots, resume-safe event handling, and accessible evidence review are implemented. |
-| Unit 5: Approval and Google Sheets export | Not started | 2026-09-15 | Requires service-account setup for live verification. |
+| Unit 5: Approval and Google Sheets export | Done (external checks pending) | 2026-09-15 | Approval revalidation, session-bound presenter unlock, idempotent export reservation, fixture payload mapping, and the accessible UI flow are implemented. Live Sheets verification requires service-account setup. |
 | Unit 6: Deployment, hardening, and demo | Not started | 2026-09-15 | Depends on all previous units. |
 
 Use `Not started`, `In progress`, `Blocked`, `Done`, or `Done (external checks pending)`. A unit is not `Done` until its build-plan definition of done has been verified.
@@ -50,6 +50,15 @@ Add entries newest first.
 **Spec impact:** None, or the specification updated to reflect this change.
 **Follow-ups:** Remaining work or blocker.
 ```
+
+### [2026-09-15] Approval and Google Sheets export completed
+**Unit:** Unit 5: Approval and Google Sheets export
+**Type:** Progress update
+**Summary:** Added strict approval, presenter-unlock, and export contracts. Approval revalidates citations and differentiated brief fields immediately before persistence; the owner capability is signed, session-bound, httpOnly, strict-site, and expires after 15 minutes. Exports reserve an idempotency key before a configured Sheets append, retain ambiguous provider outcomes to prevent duplicate writes, and map each approved brief to one auditable tracker row. The research desk now exposes approval, owner-only unlock, retryable export, and success states while static fixtures remain read-only.
+**Files/areas touched:** `src/app/api/`, `src/server/`, `src/schemas/api.ts`, `src/features/runs/`, `src/app/globals.css`, `tests/`
+**Verification:** `pnpm lint`, `pnpm typecheck`, and `pnpm test` (32 tests) passed. Fixture tests make no Google or other provider calls.
+**Spec impact:** Updated `docs/specs/04-api-contracts.md` with the deterministic Sheets tracker-row mapping.
+**Follow-ups:** Configure the service account, share only the demonstration spreadsheet with it, and exercise a live owner-only export before deployment.
 
 ### [2026-09-15] Research desk UI and live events completed
 **Unit:** Unit 4: Research desk UI and live events

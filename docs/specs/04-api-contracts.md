@@ -204,7 +204,9 @@ const ExportRunResponse = z.object({
 });
 ```
 
-The route retries transient Google failures only. It never regenerates research, rewrites briefs, or reuses an idempotency key for a different run.
+Known-not-written Google failures remain retryable; an ambiguous timeout, `429`, or `5xx` retains its idempotency reservation so a retry cannot duplicate a tracker row. The route never regenerates research, rewrites briefs, or reuses an idempotency key for a different run.
+
+The configured tracker receives one `RAW` row per approved brief, in this order: run ID, brief ID, lane, audience lens, hook, creator prompt, required asset, CTA, prohibited claims, primary evidence ID, and supporting evidence IDs. These IDs make a provider outcome auditable without sending raw source content to Google Sheets.
 
 ## `DELETE /api/session`
 

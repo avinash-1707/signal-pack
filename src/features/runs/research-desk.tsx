@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } from "react";
 
 import { BriefPack } from "@/components/brief-pack";
 import { EvidenceLedger } from "@/components/evidence-ledger";
@@ -9,7 +9,7 @@ import { SourceDrawer } from "@/components/source-drawer";
 import { createRunRequestSchema } from "@/schemas/api";
 
 import { cartesiaDemoRun, cartesiaInput, cartesiaTrace } from "./cartesia-demo";
-import { connectRunEvents, createRun, getRun, RunApiError, type CreateRunInput, type RunEvidence, type RunReport } from "./run-api-client";
+import { approveRun, connectRunEvents, createRun, exportRun, getRun, RunApiError, type CreateRunInput, type RunEvidence, type RunReport, unlockExport } from "./run-api-client";
 
 type IntakeDraft = {
   productUrl: string;
@@ -18,6 +18,12 @@ type IntakeDraft = {
   launchDate: string;
   constraint: string;
 };
+
+type ExportStatus =
+  | { kind: "idle" }
+  | { kind: "retryable_failure"; message: string }
+  | { kind: "failure"; message: string }
+  | { kind: "success"; range: string };
 
 const initialDraft: IntakeDraft = {
   ...cartesiaInput,
@@ -74,7 +80,29 @@ export function ResearchDesk() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [selectedEvidence, setSelectedEvidence] = useState<RunEvidence | null>(null);
-  const [acknowledged, setAcknowledged] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [presenterCode, setPresenterCode] = useState("");
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [ownerUnlocked, setOwnerUnlocked] = useState(false);
+  const [unlockedUntil, setUnlockedUntil] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportIdempotencyKey, setExportIdempotencyKey] = useState<string | null>(null);
+  const [exportStatus, setExportStatus] = useState<ExportStatus>({ kind: "idle" });
+
+  function resetApprovalExportState() {
+    setIsApproving(false);
+    setApprovalError(null);
+    setPresenterCode("");
+    setIsUnlocking(false);
+    setUnlockError(null);
+    setOwnerUnlocked(false);
+    setUnlockedUntil(null);
+    setIsExporting(false);
+    setExportIdempotencyKey(null);
+    setExportStatus({ kind: "idle" });
+  }
 
   const refreshRun = useCallback(async (runId: string) => {
     const nextReport = await getRun(runId);
@@ -117,7 +145,7 @@ export function ResearchDesk() {
 
     setIsSubmitting(true);
     setRequestError(null);
-    setAcknowledged(false);
+    resetApprovalExportState();
     try {
       const created = await createRun(parsed.data);
       setIsDemo(false);
@@ -134,13 +162,108 @@ export function ResearchDesk() {
     setReport(cartesiaDemoRun);
     setIsDemo(true);
     setRequestError(null);
-    setAcknowledged(false);
+    resetApprovalExportState();
     setSelectedEvidence(null);
+  }
+
+  async function handleApprovalChange(event: ChangeEvent<HTMLInputElement>) {
+    if (!event.target.checked || isDemo || report.status !== "awaiting_approval" || report.approval) {
+      return;
+    }
+
+    setIsApproving(true);
+    setApprovalError(null);
+    try {
+      const approval = await approveRun(report.id);
+      setReport((current) => current.id === report.id
+        ? {
+            ...current,
+            approval: {
+              approvedAt: approval.approvedAt,
+              acknowledgmentVersion: "creator-brief-review-v1",
+            },
+          }
+        : current);
+      setOwnerUnlocked((current) => current || approval.exportEligible);
+    } catch (error: unknown) {
+      setApprovalError(error instanceof RunApiError ? error.message : "Approval could not be recorded. Please try again.");
+    } finally {
+      setIsApproving(false);
+    }
+  }
+
+  async function handleUnlock(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const code = presenterCode.trim();
+    if (!code) {
+      setUnlockError("Enter the presenter code to unlock owner export.");
+      return;
+    }
+
+    setIsUnlocking(true);
+    setUnlockError(null);
+    try {
+      const unlocked = await unlockExport(code);
+      setOwnerUnlocked(true);
+      setUnlockedUntil(unlocked.unlockedUntil);
+      setPresenterCode("");
+    } catch (error: unknown) {
+      setUnlockError(error instanceof RunApiError ? error.message : "Owner export could not be unlocked. Please try again.");
+    } finally {
+      setIsUnlocking(false);
+    }
+  }
+
+  async function handleExport() {
+    if (isDemo || !report.approval || !ownerUnlocked || report.export) {
+      return;
+    }
+
+    const idempotencyKey = exportIdempotencyKey ?? crypto.randomUUID();
+    if (!exportIdempotencyKey) {
+      setExportIdempotencyKey(idempotencyKey);
+    }
+
+    setIsExporting(true);
+    setExportStatus({ kind: "idle" });
+    try {
+      const exported = await exportRun(report.id, idempotencyKey);
+      setReport((current) => current.id === report.id
+        ? {
+            ...current,
+            export: {
+              provider: "google_sheets",
+              exportedAt: exported.exportedAt,
+            },
+          }
+        : current);
+      setExportStatus({ kind: "success", range: exported.range });
+    } catch (error: unknown) {
+      if (error instanceof RunApiError && error.code === "OWNER_EXPORT_REQUIRED") {
+        setOwnerUnlocked(false);
+        setUnlockError("The owner unlock expired. Enter the presenter code again to export.");
+        return;
+      }
+      if (error instanceof RunApiError && error.code === "EXPORT_RETRYABLE") {
+        setExportStatus({ kind: "retryable_failure", message: error.message });
+        return;
+      }
+      setExportStatus({
+        kind: "failure",
+        message: error instanceof RunApiError ? error.message : "Export could not be completed.",
+      });
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   const trace = isDemo ? cartesiaTrace : liveTrace(report);
   const partialMessage = report.limitations.find((limitation) => limitation.includes("One source unavailable")) ?? report.limitations[0];
   const canReview = report.status === "awaiting_approval";
+  const isApproved = report.approval !== null;
+  const isExported = report.export !== null;
+  const canApprove = !isDemo && canReview && !isApproved;
+  const canExport = !isDemo && isApproved && ownerUnlocked && !isExported && !isExporting;
 
   return (
     <main className="research-desk">
@@ -192,8 +315,28 @@ export function ResearchDesk() {
       <section aria-labelledby="approval-heading" className="approval-band">
         <div><p className="eyebrow">DOCUMENT SIGN-OFF</p><h2 id="approval-heading">Approval gate</h2></div>
         <ul className="validator-list" aria-label="Pack validators"><li><span aria-hidden="true">✓</span>Citations {canReview ? "checked" : "pending"}</li><li><span aria-hidden="true">✓</span>Unique primary claims {canReview ? "checked" : "pending"}</li><li><span aria-hidden="true">✓</span>Narrative overlap {canReview ? "checked" : "pending"}</li></ul>
-        <label className="acknowledgment"><input checked={acknowledged} disabled={!canReview} type="checkbox" onChange={(event) => setAcknowledged(event.target.checked)} /><span>I have reviewed these claims and constraints.</span></label>
-        <div className="export-state"><button className="export-button" disabled type="button">Export to Google Sheets</button><p>{acknowledged ? "Approval API required before export." : "Owner-only export unlocks after approval."}</p></div>
+        <div className="approval-controls">
+          <label className="acknowledgment"><input checked={isApproved} disabled={!canApprove || isApproving} type="checkbox" onChange={handleApprovalChange} /><span>I have reviewed these claims and constraints.</span></label>
+          <p className={approvalError ? "approval-status status-error" : isApproved ? "approval-status status-success" : "approval-status"} aria-live="polite" role={approvalError ? "alert" : "status"}>
+            <span aria-hidden="true">{approvalError ? "!" : isApproved ? "✓" : "·"}</span>
+            {approvalError ?? (isDemo ? "Static fixture: review only." : isApproving ? "Recording approval…" : isApproved ? "Approval recorded." : canReview ? "Acknowledge to submit approval." : "Awaiting a review-ready pack.")}
+          </p>
+        </div>
+        <div className="export-state">
+          {!isDemo ? <form className="owner-unlock" onSubmit={handleUnlock}>
+            <label htmlFor="presenter-code">Presenter code<input aria-describedby="owner-unlock-help" aria-invalid={unlockError ? true : undefined} disabled={isUnlocking || ownerUnlocked} id="presenter-code" maxLength={128} onChange={(event) => { setPresenterCode(event.target.value); setUnlockError(null); }} type="password" value={presenterCode} /></label>
+            <button className="unlock-button" disabled={isUnlocking || ownerUnlocked} type="submit">{ownerUnlocked ? "Unlocked" : isUnlocking ? "Unlocking…" : "Unlock"}</button>
+          </form> : null}
+          <p className={unlockError ? "owner-note status-error" : ownerUnlocked ? "owner-note status-success" : "owner-note"} id="owner-unlock-help" aria-live="polite" role={unlockError ? "alert" : "status"}>
+            <span aria-hidden="true">{unlockError ? "!" : ownerUnlocked ? "✓" : "·"}</span>
+            {unlockError ?? (isDemo ? "Static fixture: Sheets export is disabled." : ownerUnlocked ? `Owner export unlocked${unlockedUntil ? ` until ${new Date(unlockedUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}.` : "Owner-only Sheets write. Unlock with the presenter code.")}
+          </p>
+          <button className="export-button" disabled={!canExport} onClick={handleExport} type="button">{isExported ? "Exported to Google Sheets" : isExporting ? "Exporting…" : exportStatus.kind === "retryable_failure" ? "Retry Google Sheets export" : "Export to Google Sheets"}</button>
+          <p className={exportStatus.kind === "retryable_failure" || exportStatus.kind === "failure" ? "export-note status-error" : exportStatus.kind === "success" || isExported ? "export-note status-success" : "export-note"} aria-live="polite" role={exportStatus.kind === "retryable_failure" || exportStatus.kind === "failure" ? "alert" : "status"}>
+            <span aria-hidden="true">{exportStatus.kind === "retryable_failure" || exportStatus.kind === "failure" ? "!" : exportStatus.kind === "success" || isExported ? "✓" : "·"}</span>
+            {exportStatus.kind === "retryable_failure" ? `${exportStatus.message} Retry uses the same export record.` : exportStatus.kind === "failure" ? exportStatus.message : exportStatus.kind === "success" ? `Exported to ${exportStatus.range}.` : isExported ? "This approved pack was already exported." : isDemo ? "The static fixture never writes to Google Sheets." : !isApproved ? "Export unlocks after approval." : !ownerUnlocked ? "Owner unlock required before export." : "Ready to export the approved pack."}
+          </p>
+        </div>
       </section>
       <SourceDrawer evidence={selectedEvidence} onClose={() => setSelectedEvidence(null)} />
     </main>
