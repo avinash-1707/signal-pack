@@ -70,3 +70,7 @@ Stack: Next.js 16 App Router · strict TypeScript · Zod · Neon Postgres · Ope
 - Run the relevant formatter, lint, typecheck, tests, and migration validation once the application scaffold provides them. State explicitly when a required live-provider or deployment check could not run.
 - Update `docs/progress-tracker.md` when a build unit changes status, an external dependency changes, a gap is found, or implementation deliberately diverges from a specification.
 - Update the owning specification in the same change when behavior, contracts, security policy, retention, or deployment choices change. Do not silently let code become the source of truth.
+
+<!-- Added: 2026-09-15 -->
+## Commit Granularity
+When a task spans multiple independently reviewable concerns, split it into logical commits before pushing (for example: scaffold, contracts/migration, server behavior). Do not bundle the whole task into one commit; verify the final worktree before the first commit and push only after the logical series is complete.
