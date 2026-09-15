@@ -67,6 +67,21 @@ describe("brief compilation", () => {
     });
   });
 
+  it("rejects duplicate lanes, audience lenses, and primary evidence IDs", async () => {
+    const evidence = await fixtureEvidence();
+    const duplicated = JSON.parse(proposal(evidence)) as { briefs: Array<Record<string, unknown>> };
+    duplicated.briefs[1] = {
+      ...duplicated.briefs[1],
+      lane: "engineer_proof",
+      audienceLens: " AI   engineers ",
+      primaryEvidenceId: evidence[0]!.id,
+    };
+
+    const result = await compileBriefs(client([JSON.stringify(duplicated), JSON.stringify(duplicated)]), runId, evidence);
+
+    expect(result.status).toBe("incomplete");
+  });
+
   it("repairs malformed model output once before returning an exportable pack", async () => {
     const evidence = await fixtureEvidence();
     const result = await compileBriefs(client(["not JSON", proposal(evidence)]), runId, evidence);

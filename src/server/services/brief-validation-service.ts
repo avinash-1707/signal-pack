@@ -20,17 +20,21 @@ export function validateBriefPack(
   const reasons: string[] = [];
 
   for (const brief of proposal.briefs) {
-    if (!lanes.add(brief.lane)) {
+    if (lanes.has(brief.lane)) {
       reasons.push("Each brief must use a distinct lane.");
     }
+    lanes.add(brief.lane);
 
-    if (!audienceLenses.add(normalizeAudienceLens(brief.audienceLens))) {
+    const normalizedAudienceLens = normalizeAudienceLens(brief.audienceLens);
+    if (audienceLenses.has(normalizedAudienceLens)) {
       reasons.push("Each brief must use a distinct audience lens.");
     }
+    audienceLenses.add(normalizedAudienceLens);
 
-    if (!primaryEvidenceIds.add(brief.primaryEvidenceId)) {
+    if (primaryEvidenceIds.has(brief.primaryEvidenceId)) {
       reasons.push("Each brief must use distinct primary evidence.");
     }
+    primaryEvidenceIds.add(brief.primaryEvidenceId);
 
     for (const evidenceId of [brief.primaryEvidenceId, ...brief.supportingEvidenceIds]) {
       if (!evidenceIds.has(evidenceId)) {

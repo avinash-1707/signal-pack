@@ -21,8 +21,11 @@ export async function GET(request: Request, { params }: Context): Promise<NextRe
     coverage: null,
     evidence: [],
     briefs: [],
-    approval: null,
-    export: null,
+    approval: run.approval && {
+      approvedAt: run.approval.approvedAt.toISOString(),
+      acknowledgmentVersion: run.approval.acknowledgmentVersion,
+    },
+    export: run.export && { provider: run.export.provider, exportedAt: run.export.exportedAt.toISOString() },
     limitations: [],
   });
   return NextResponse.json(response);

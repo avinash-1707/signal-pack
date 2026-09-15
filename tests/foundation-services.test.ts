@@ -85,7 +85,7 @@ describe("RunRepository", () => {
       "d41dbad0-2f91-4f07-b8e9-73d7f90c08f7",
     );
 
-    expect(query).toContain("WHERE id = $1 AND session_id = $2");
+    expect(query).toContain("WHERE runs.id = $1 AND runs.session_id = $2");
     expect(values).toEqual([
       "6c4c1e99-7272-4d07-8382-dca1649112a9",
       "d41dbad0-2f91-4f07-b8e9-73d7f90c08f7",

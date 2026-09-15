@@ -73,6 +73,33 @@ export const getRunResponseSchema = z.object({
   limitations: z.array(z.string()),
 });
 
+export const approveRunRequestSchema = z
+  .object({
+    acknowledgmentVersion: z.literal("creator-brief-review-v1"),
+    acknowledged: z.literal(true),
+  })
+  .strict();
+
+export const approveRunResponseSchema = z.object({
+  approvalId: z.uuid(),
+  status: z.literal("awaiting_approval"),
+  approvedAt: z.iso.datetime(),
+  exportEligible: z.boolean(),
+});
+
+export const unlockExportRequestSchema = z.object({ code: z.string().min(1).max(128) }).strict();
+
+export const unlockExportResponseSchema = z.object({ unlockedUntil: z.iso.datetime() });
+
+export const exportRunRequestSchema = z.object({ idempotencyKey: z.uuid() }).strict();
+
+export const exportRunResponseSchema = z.object({
+  exportId: z.uuid(),
+  spreadsheetId: z.string(),
+  range: z.string(),
+  exportedAt: z.iso.datetime(),
+});
+
 export const runSseEventSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("run.status"),
