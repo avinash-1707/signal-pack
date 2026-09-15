@@ -19,7 +19,7 @@ If a change alters a product, security, retention, contract, or deployment decis
 | Unit 1: Application foundation | Done (external checks pending) | 2026-09-15 | Session-owned run routes, signed httpOnly cookies, Postgres repositories, Upstash KV limit primitives, and safe logging are implemented. Live Postgres/KV verification awaits credentials. |
 | Unit 2: Evidence and safe retrieval core | Done (external checks pending) | 2026-09-15 | Safe retrieval, evidence normalization, tool-trace persistence, retry handling, and the fixture path are implemented. Live Brave and public-site checks await Unit 0 credentials. |
 | Unit 3: Research and brief compilation | Done (external checks pending) | 2026-09-15 | Bounded OpenRouter tool loop, strict brief compilation, validation/repair, and atomic approval-ready persistence are fixture-tested. Live OpenRouter verification awaits Unit 0 credentials. |
-| Unit 4: Research desk UI and live events | Not started | 2026-09-15 | Can begin fixture-first once shared contracts exist. |
+| Unit 4: Research desk UI and live events | Done | 2026-09-15 | Fixture-first research desk, owner-scoped SSE snapshots, resume-safe event handling, and accessible evidence review are implemented. |
 | Unit 5: Approval and Google Sheets export | Not started | 2026-09-15 | Requires service-account setup for live verification. |
 | Unit 6: Deployment, hardening, and demo | Not started | 2026-09-15 | Depends on all previous units. |
 
@@ -50,6 +50,15 @@ Add entries newest first.
 **Spec impact:** None, or the specification updated to reflect this change.
 **Follow-ups:** Remaining work or blocker.
 ```
+
+### [2026-09-15] Research desk UI and live events completed
+**Unit:** Unit 4: Research desk UI and live events
+**Type:** Progress update
+**Summary:** Added the responsive editorial research desk with the static Cartesia fixture as a shareable demo, exact intake flow, source-first evidence ledger and keyboard-accessible drawer, explicit partial-result state, three differentiated brief lanes, and a restrained approval gate. Live session-owned runs use validated API responses and owner-scoped SSE snapshots; the client drops duplicate events and re-fetches authoritative state on a sequence gap.
+**Files/areas touched:** `src/app/`, `src/components/`, `src/features/runs/`, `tests/run-api-client.test.ts`, `vitest.config.ts`
+**Verification:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (24 tests), and `pnpm build` passed. The fixture path uses no provider credentials or external calls.
+**Spec impact:** None; implementation follows the existing UI, API, architecture, and accessibility contracts.
+**Follow-ups:** Exercise a live provider-backed run and visually review the deployed responsive layout once Unit 0 credentials and deployment exist.
 
 ### [2026-09-15] Research and brief compilation completed
 **Unit:** Unit 3: Research and brief compilation

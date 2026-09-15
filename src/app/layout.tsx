@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import "./globals.css";
+
 export const metadata: Metadata = {
   title: "Signal Pack",
   description: "Evidence-backed creator briefs for product launches.",
