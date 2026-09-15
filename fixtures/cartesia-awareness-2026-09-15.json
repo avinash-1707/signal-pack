@@ -1,0 +1,22 @@
+{
+  "input": {
+    "productUrl": "https://cartesia.ai/",
+    "objective": "awareness",
+    "audience": "AI engineers and technical founders",
+    "launchDate": null,
+    "constraint": "Do not make claims not present in first-party evidence."
+  },
+  "evidence": [
+    { "url": "https://cartesia.ai/", "title": "Cartesia", "publisher": "Cartesia", "excerpt": "Recorded fixture homepage context.", "observations": ["Product overview recorded."], "roles": ["authority"], "confidence": "high" },
+    { "url": "https://cartesia.ai/product", "title": "Product", "publisher": "Cartesia", "excerpt": "Recorded fixture product context.", "observations": ["Product evidence recorded."], "roles": ["product_proof"], "confidence": "high" },
+    { "url": "https://cartesia.ai/docs", "title": "Documentation", "publisher": "Cartesia", "excerpt": "Recorded fixture documentation context.", "observations": ["Technical context recorded."], "roles": ["authority"], "confidence": "high" },
+    { "url": "https://cartesia.ai/blog", "title": "Blog", "publisher": "Cartesia", "excerpt": "Recorded fixture launch context.", "observations": ["Launch context recorded."], "roles": ["creator_narrative"], "confidence": "medium" },
+    { "url": "https://cartesia.ai/company", "title": "Company", "publisher": "Cartesia", "excerpt": "Recorded fixture company context.", "observations": ["Company context recorded."], "roles": ["authority"], "confidence": "medium" },
+    { "url": "https://cartesia.ai/contact", "title": "Contact", "publisher": "Cartesia", "excerpt": "Recorded fixture conversion context.", "observations": ["Conversion context recorded."], "roles": ["conversion"], "confidence": "medium" },
+    { "url": "https://cartesia.ai/news", "title": "News", "publisher": "Cartesia", "excerpt": "Recorded fixture social context.", "observations": ["Social proof context recorded."], "roles": ["social_proof"], "confidence": "low" },
+    { "url": "https://cartesia.ai/resources", "title": "Resources", "publisher": "Cartesia", "excerpt": "Recorded fixture retention context.", "observations": ["Retention context recorded."], "roles": ["retention"], "confidence": "medium" }
+  ],
+  "expected": {
+    "coverage": { "found": ["authority", "product_proof", "retention", "creator_narrative", "social_proof", "conversion"], "notFoundInThisRun": [] }
+  }
+}

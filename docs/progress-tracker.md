@@ -17,7 +17,7 @@ If a change alters a product, security, retention, contract, or deployment decis
 |---|---|---|---|
 | Unit 0: Accounts and local prerequisites | Not started | 2026-09-15 | Provider accounts and development credentials are required for live integration checks. |
 | Unit 1: Application foundation | Done (external checks pending) | 2026-09-15 | Session-owned run routes, signed httpOnly cookies, Postgres repositories, Upstash KV limit primitives, and safe logging are implemented. Live Postgres/KV verification awaits credentials. |
-| Unit 2: Evidence and safe retrieval core | Not started | 2026-09-15 | Depends on Unit 1. |
+| Unit 2: Evidence and safe retrieval core | Done (external checks pending) | 2026-09-15 | Safe retrieval, evidence normalization, tool-trace persistence, retry handling, and the fixture path are implemented. Live Brave and public-site checks await Unit 0 credentials. |
 | Unit 3: Research and brief compilation | Not started | 2026-09-15 | Depends on Unit 2. |
 | Unit 4: Research desk UI and live events | Not started | 2026-09-15 | Can begin fixture-first once shared contracts exist. |
 | Unit 5: Approval and Google Sheets export | Not started | 2026-09-15 | Requires service-account setup for live verification. |
@@ -50,6 +50,15 @@ Add entries newest first.
 **Spec impact:** None, or the specification updated to reflect this change.
 **Follow-ups:** Remaining work or blocker.
 ```
+
+### [2026-09-15] Evidence and safe retrieval core completed
+**Unit:** Unit 2: Evidence and safe retrieval core
+**Type:** Progress update
+**Summary:** Implemented a DNS-pinned, policy-aware public fetch adapter with HTTPS-only targets, credential and special-address rejection, robots enforcement at every target and redirect, three-hop redirect bounds, 10-second timeouts, 1 MiB response limits, and bounded extraction. Added Brave result parsing, retry classification, normalized evidence deduplication and coverage, parameterized evidence/tool-trace persistence, and a sanitized eight-record Cartesia fixture. Partial outcomes preserve machine-readable codes for persisted traces and future report limitations.
+**Files/areas touched:** `src/server/adapters/`, `src/server/services/`, `src/server/repositories/evidence-repository.ts`, `src/schemas/evidence.ts`, `fixtures/`, `tests/evidence-core.test.ts`
+**Verification:** `pnpm typecheck`, `pnpm test` (16 tests), `pnpm lint`, and `pnpm build` passed. Security review found and verified fixes for per-path robots cache evaluation, special-use IP rejection, and failed-client cleanup. Live Brave and public-site checks could not run without Unit 0 credentials.
+**Spec impact:** None; implementation follows the existing source-access, safety, and retention contracts.
+**Follow-ups:** Configure Unit 0 credentials and exercise the live Brave/public retrieval paths before deployment.
 
 ### [2026-09-15] Application foundation started
 **Unit:** Unit 1: Application foundation
