@@ -16,7 +16,7 @@ If a change alters a product, security, retention, contract, or deployment decis
 | Unit | Status | Last updated | Notes |
 |---|---|---|---|
 | Unit 0: Accounts and local prerequisites | Not started | 2026-09-15 | Provider accounts and development credentials are required for live integration checks. |
-| Unit 1: Application foundation | Not started | 2026-09-15 | No application code or package configuration exists. |
+| Unit 1: Application foundation | Done (external checks pending) | 2026-09-15 | Session-owned run routes, signed httpOnly cookies, Postgres repositories, Upstash KV limit primitives, and safe logging are implemented. Live Postgres/KV verification awaits credentials. |
 | Unit 2: Evidence and safe retrieval core | Not started | 2026-09-15 | Depends on Unit 1. |
 | Unit 3: Research and brief compilation | Not started | 2026-09-15 | Depends on Unit 2. |
 | Unit 4: Research desk UI and live events | Not started | 2026-09-15 | Can begin fixture-first once shared contracts exist. |
@@ -50,6 +50,15 @@ Add entries newest first.
 **Spec impact:** None, or the specification updated to reflect this change.
 **Follow-ups:** Remaining work or blocker.
 ```
+
+### [2026-09-15] Application foundation started
+**Unit:** Unit 1: Application foundation
+**Type:** Progress update
+**Summary:** Created the strict Next.js App Router foundation with shared Zod API/domain/environment contracts, safe structured logging, the authoritative initial Postgres schema migration, signed session ownership, session-scoped run routes, and shared KV rate-limit primitives. Fixture tests cover strict contracts, missing environment reporting, cascading relationships, signed-cookie tamper resistance, session deletion, ownership-scoped queries, and rate-limit ordering without provider credentials.
+**Files/areas touched:** `src/`, `tests/`, `migrations/`, application tooling, `.env.example`
+**Verification:** `pnpm test` (8 tests), `pnpm lint`, `pnpm typecheck`, and `pnpm build` passed. The workspace explicitly rejects the optional `unrs-resolver` build and uses its fallback. Live Postgres/KV checks could not run without configured credentials.
+**Spec impact:** None; implementation follows existing architecture, API, data, and deployment contracts.
+**Follow-ups:** Configure Unit 0 credentials, apply the migration to local/Neon Postgres, and exercise live session ownership and KV rate limits.
 
 ### [2026-09-15] Documentation baseline established
 **Unit:** Planning
