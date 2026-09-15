@@ -23,6 +23,12 @@ export const extractPublicPageSchema = z
   })
   .strict();
 
+export const finishResearchSchema = z
+  .object({
+    reason: z.enum(["sufficient_evidence", "source_exhausted", "budget_exhausted"]),
+  })
+  .strict();
+
 export const evidenceSchema = z.object({
   id: z.uuid(),
   runId: z.uuid(),
