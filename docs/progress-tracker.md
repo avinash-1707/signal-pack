@@ -18,7 +18,7 @@ If a change alters a product, security, retention, contract, or deployment decis
 | Unit 0: Accounts and local prerequisites | Not started | 2026-09-15 | Provider accounts and development credentials are required for live integration checks. |
 | Unit 1: Application foundation | Done (external checks pending) | 2026-09-15 | Session-owned run routes, signed httpOnly cookies, Postgres repositories, Upstash KV limit primitives, and safe logging are implemented. Live Postgres/KV verification awaits credentials. |
 | Unit 2: Evidence and safe retrieval core | Done (external checks pending) | 2026-09-15 | Safe retrieval, evidence normalization, tool-trace persistence, retry handling, and the fixture path are implemented. Live Brave and public-site checks await Unit 0 credentials. |
-| Unit 3: Research and brief compilation | Not started | 2026-09-15 | Depends on Unit 2. |
+| Unit 3: Research and brief compilation | Done (external checks pending) | 2026-09-15 | Bounded OpenRouter tool loop, strict brief compilation, validation/repair, and atomic approval-ready persistence are fixture-tested. Live OpenRouter verification awaits Unit 0 credentials. |
 | Unit 4: Research desk UI and live events | Not started | 2026-09-15 | Can begin fixture-first once shared contracts exist. |
 | Unit 5: Approval and Google Sheets export | Not started | 2026-09-15 | Requires service-account setup for live verification. |
 | Unit 6: Deployment, hardening, and demo | Not started | 2026-09-15 | Depends on all previous units. |
@@ -50,6 +50,15 @@ Add entries newest first.
 **Spec impact:** None, or the specification updated to reflect this change.
 **Follow-ups:** Remaining work or blocker.
 ```
+
+### [2026-09-15] Research and brief compilation completed
+**Unit:** Unit 3: Research and brief compilation
+**Type:** Progress update
+**Summary:** Added a bounded, one-tool-at-a-time OpenRouter harness using strict tool arguments, deadline propagation, compact evidence context, and safe traces. Brief compilation uses strict JSON Schema and Zod validation, performs one repair pass, rejects unsupported citations and duplicate lanes/lenses/primary evidence, requires usable first-party evidence, and atomically persists only validated packs while transitioning the run to approval-ready.
+**Files/areas touched:** `src/schemas/brief.ts`, `src/server/adapters/open-router.ts`, `src/server/services/`, `src/server/repositories/`, `tests/research-compilation.test.ts`
+**Verification:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (23 tests), and `pnpm build` passed. Fixture tests make no network or paid-provider calls. Sage security review findings for OpenRouter error/deadline handling and persistence transition atomicity were addressed.
+**Spec impact:** None; implementation follows the existing research-harness, architecture, and data-retention contracts.
+**Follow-ups:** Configure Unit 0 OpenRouter credentials and exercise a permitted live run before deployment.
 
 ### [2026-09-15] Evidence and safe retrieval core completed
 **Unit:** Unit 2: Evidence and safe retrieval core
