@@ -16,6 +16,8 @@
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "robots-parser": "^3.0.1",
+    "undici": "^8.10.2",
     "zod": "^4.6.5"
   },
   "devDependencies": {
