@@ -22,7 +22,7 @@ export type BraveSearchResult =
 export class BraveSearch {
   constructor(private readonly apiKey: string, private readonly request: typeof fetch = fetch) {}
 
-  async search(input: SearchPublicWeb): Promise<BraveSearchResult> {
+  async search(input: SearchPublicWeb, signal?: AbortSignal): Promise<BraveSearchResult> {
     const result = await retryTransient(
       async () => {
         const url = new URL("https://api.search.brave.com/res/v1/web/search");
@@ -31,7 +31,10 @@ export class BraveSearch {
         if (input.domains?.length) {
           url.searchParams.set("site", input.domains.join(","));
         }
-        const response = await this.request(url, { headers: { Accept: "application/json", "X-Subscription-Token": this.apiKey } });
+        const response = await this.request(url, {
+          headers: { Accept: "application/json", "X-Subscription-Token": this.apiKey },
+          ...(signal ? { signal } : {}),
+        });
         if (!response.ok) {
           throw { status: response.status };
         }

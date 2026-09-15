@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import { briefPackProposalSchema, type CreatorBrief } from "@/schemas/brief";
-import type { Evidence } from "@/schemas/evidence";
-import type { OpenRouter, OpenRouterMessage } from "@/server/adapters/open-router";
+import { briefPackProposalSchema, type CreatorBrief } from "../../schemas/brief";
+import type { Evidence } from "../../schemas/evidence";
+import type { OpenRouter, OpenRouterMessage } from "../adapters/open-router";
 import { hasUsableFirstPartyEvidence, validateBriefPack } from "./brief-validation-service";
 
 export type BriefCompilation =

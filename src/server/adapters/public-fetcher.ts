@@ -27,7 +27,7 @@ type HttpResponse = { statusCode: number; headers: Record<string, string | strin
 
 export type PublicFetcherDependencies = {
   resolve?(hostname: string): Promise<ResolvedAddress[]>;
-  request?(url: URL, address: ResolvedAddress, headers: Record<string, string>): Promise<HttpResponse>;
+  request?(url: URL, address: ResolvedAddress, headers: Record<string, string>, signal?: AbortSignal): Promise<HttpResponse>;
   now?(): Date;
 };
 
@@ -36,7 +36,7 @@ type RobotsPolicy = { allowAll: boolean; rules: ReturnType<typeof robotsParser> 
 export class PublicFetcher {
   private readonly robots = new Map<string, RobotsPolicy>();
   private readonly resolve: (hostname: string) => Promise<ResolvedAddress[]>;
-  private readonly request: (url: URL, address: ResolvedAddress, headers: Record<string, string>) => Promise<HttpResponse>;
+  private readonly request: (url: URL, address: ResolvedAddress, headers: Record<string, string>, signal?: AbortSignal) => Promise<HttpResponse>;
   private readonly now: () => Date;
 
   constructor(dependencies: PublicFetcherDependencies = {}) {
@@ -45,7 +45,7 @@ export class PublicFetcher {
     this.now = dependencies.now ?? (() => new Date());
   }
 
-  async extract(value: string): Promise<FetchResult> {
+  async extract(value: string, signal?: AbortSignal): Promise<FetchResult> {
     let target: URL;
     try {
       target = validateUrl(value);
@@ -58,13 +58,13 @@ export class PublicFetcher {
       if (!address) {
         return { outcome: "partial", code: "UNSAFE_ADDRESS" };
       }
-      if (!(await this.isRobotsAllowed(target, address))) {
+      if (!(await this.isRobotsAllowed(target, address, signal))) {
         return { outcome: "partial", code: "ACCESS_DISALLOWED" };
       }
 
       let response: HttpResponse;
       try {
-        response = await this.request(target, address, { accept: "text/html, text/plain", "user-agent": USER_AGENT });
+        response = await this.request(target, address, { accept: "text/html, text/plain", "user-agent": USER_AGENT }, signal);
       } catch (error: unknown) {
         return { outcome: "partial", code: isTimeout(error) ? "TIMEOUT" : "UPSTREAM_UNAVAILABLE" };
       }
@@ -118,7 +118,7 @@ export class PublicFetcher {
     }
   }
 
-  private async isRobotsAllowed(target: URL, address: ResolvedAddress): Promise<boolean> {
+  private async isRobotsAllowed(target: URL, address: ResolvedAddress, signal?: AbortSignal): Promise<boolean> {
     const origin = target.origin;
     const cached = this.robots.get(origin);
     if (cached && cached.expiresAt > this.now().getTime()) {
@@ -127,7 +127,7 @@ export class PublicFetcher {
     const robotsUrl = new URL("/robots.txt", origin);
     let response: HttpResponse;
     try {
-      response = await this.request(robotsUrl, address, { accept: "text/plain", "user-agent": USER_AGENT });
+      response = await this.request(robotsUrl, address, { accept: "text/plain", "user-agent": USER_AGENT }, signal);
     } catch {
       this.cacheRobots(origin, false, null);
       return false;
@@ -171,7 +171,7 @@ async function resolvePublicAddresses(hostname: string): Promise<ResolvedAddress
   return addresses.map((address) => ({ address: address.address, family: address.family === 6 ? 6 : 4 }));
 }
 
-async function requestPublicUrl(url: URL, address: ResolvedAddress, headers: Record<string, string>): Promise<HttpResponse> {
+async function requestPublicUrl(url: URL, address: ResolvedAddress, headers: Record<string, string>, signal?: AbortSignal): Promise<HttpResponse> {
   const client = new Client(url.origin, {
     connect: {
       lookup: (_hostname, _options, callback) => callback(null, address.address, address.family),
@@ -187,7 +187,7 @@ async function requestPublicUrl(url: URL, address: ResolvedAddress, headers: Rec
       path: `${url.pathname}${url.search}`,
       method: "GET",
       headers,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]) : AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error: unknown) {
     await client.destroy(error instanceof Error ? error : new Error("Public request failed"));
@@ -256,7 +256,8 @@ function isRedirect(statusCode: number): boolean {
 }
 
 function isTimeout(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "name" in error && error.name === "TimeoutError";
+  return typeof error === "object" && error !== null && "name" in error
+    && (error.name === "TimeoutError" || error.name === "AbortError");
 }
 
 async function readBounded(body: AsyncIterable<Uint8Array>): Promise<string> {

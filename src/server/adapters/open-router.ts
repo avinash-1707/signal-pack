@@ -52,7 +52,7 @@ export class OpenRouter {
 
   async complete(
     messages: OpenRouterMessage[],
-    options: { tools?: unknown[]; responseFormat?: unknown },
+    options: { tools?: unknown[]; responseFormat?: unknown; signal?: AbortSignal },
   ): Promise<OpenRouterCompletion> {
     const response = await this.request("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -68,17 +68,19 @@ export class OpenRouter {
         provider: { require_parameters: true },
         stream: false,
       }),
+      ...(options.signal ? { signal: options.signal } : {}),
     });
-    const payload: unknown = await response.json();
 
     if (!response.ok) {
-      throw new OpenRouterError(response.status, [408, 429, 502, 503, 504].includes(response.status));
+      throw new OpenRouterError(response.status, isRetryableStatus(response.status));
     }
 
+    const payload: unknown = await response.json();
     const completion = completionSchema.parse(payload);
     const choice = completion.choices[0]!;
     if (choice.error || choice.finish_reason === "error") {
-      throw new OpenRouterError(choice.error?.code ?? 502, true);
+      const status = choice.error?.code ?? 502;
+      throw new OpenRouterError(status, isRetryableStatus(status));
     }
 
     return {
@@ -86,4 +88,8 @@ export class OpenRouter {
       toolCalls: choice.message.tool_calls ?? [],
     };
   }
+}
+
+function isRetryableStatus(status: number): boolean {
+  return [408, 429, 502, 503, 504].includes(status);
 }

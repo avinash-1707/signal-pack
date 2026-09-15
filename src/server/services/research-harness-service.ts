@@ -1,15 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-import { type Evidence, extractPublicPageSchema, finishResearchSchema, searchPublicWebSchema, type ToolTrace } from "@/schemas/evidence";
-import type { BraveSearch } from "@/server/adapters/brave-search";
-import type { PublicFetcher } from "@/server/adapters/public-fetcher";
-import type { OpenRouter, OpenRouterMessage, OpenRouterToolCall } from "@/server/adapters/open-router";
+import { type Evidence, extractPublicPageSchema, finishResearchSchema, searchPublicWebSchema, type ToolTrace } from "../../schemas/evidence";
+import type { BraveSearch } from "../adapters/brave-search";
+import type { PublicFetcher } from "../adapters/public-fetcher";
+import type { OpenRouter, OpenRouterMessage, OpenRouterToolCall } from "../adapters/open-router";
 import { normalizeEvidence } from "./evidence-service";
 
 const maxSearches = 8;
 const maxExtractions = 8;
 const maxEvidence = 12;
 const maxDurationMs = 90_000;
+const maxModelTurns = 16;
 
 const toolDefinitions = [
   {
@@ -72,16 +73,23 @@ export type ResearchHarnessInput = {
   objective: string;
 };
 
+export type ResearchCollection = {
+  evidence: Evidence[];
+  limitations: string[];
+};
+
 export async function collectResearchEvidence(
   input: ResearchHarnessInput,
   dependencies: ResearchHarnessDependencies,
-): Promise<Evidence[]> {
+): Promise<ResearchCollection> {
   const now = dependencies.now ?? (() => new Date());
   const startedAt = now().getTime();
   const evidence: Evidence[] = [];
+  const limitations: string[] = [];
   let searches = 0;
   let extractions = 0;
   let sequence = 0;
+  let turns = 0;
   let messages: OpenRouterMessage[] = [
     {
       role: "system",
@@ -90,23 +98,53 @@ export async function collectResearchEvidence(
     { role: "user", content: JSON.stringify({ productUrl: input.productUrl, audience: input.audience, objective: input.objective }) },
   ];
 
-  while (searches < maxSearches && extractions < maxExtractions && evidence.length < maxEvidence && now().getTime() - startedAt < maxDurationMs) {
-    const response = await dependencies.client.complete(messages, { tools: [...toolDefinitions] });
-    if (response.toolCalls.length !== 1) break;
+  while ((searches < maxSearches || extractions < maxExtractions) && evidence.length < maxEvidence && turns < maxModelTurns && now().getTime() - startedAt < maxDurationMs) {
+    const remainingMs = maxDurationMs - (now().getTime() - startedAt);
+    let response: Awaited<ReturnType<OpenRouter["complete"]>>;
+    try {
+      response = await dependencies.client.complete(messages, {
+        tools: [...toolDefinitions],
+        signal: AbortSignal.timeout(remainingMs),
+      });
+    } catch (error: unknown) {
+      limitations.push(isTimeout(error) ? "MODEL_TIMEOUT" : "MODEL_UNAVAILABLE");
+      break;
+    }
+    turns += 1;
+    if (response.toolCalls.length === 0) {
+      limitations.push("MODEL_FINISHED_WITHOUT_FINISH_TOOL");
+      break;
+    }
+    if (response.toolCalls.length !== 1) {
+      limitations.push("INVALID_TOOL_CALL");
+      break;
+    }
 
     const call = response.toolCalls[0]!;
+    const budgetExhausted = (call.function.name === "search_public_web" && searches === maxSearches)
+      || (call.function.name === "extract_public_page" && extractions === maxExtractions);
+    if (call.function.name === "search_public_web" && !budgetExhausted) searches += 1;
+    if (call.function.name === "extract_public_page" && !budgetExhausted) extractions += 1;
     messages = [...messages, { role: "assistant", content: response.content, tool_calls: [call] }];
-    const dispatched = await dispatchCall(call, input, dependencies, evidence, now);
+    const dispatchRemainingMs = maxDurationMs - (now().getTime() - startedAt);
+    const deadlineExceeded = dispatchRemainingMs <= 0;
+    const dispatched = deadlineExceeded
+      ? { arguments: parseArguments(call.function.arguments) ?? {}, outcome: "partial" as const, latencyMs: null, errorCode: "RUN_TIMEOUT", result: { outcome: "partial", code: "RUN_TIMEOUT" } }
+      : budgetExhausted
+        ? { arguments: parseArguments(call.function.arguments) ?? {}, outcome: "partial" as const, latencyMs: null, errorCode: "BUDGET_EXHAUSTED", result: { outcome: "partial", code: "BUDGET_EXHAUSTED" } }
+        : await dispatchCall(call, input, dependencies, evidence, now, AbortSignal.timeout(dispatchRemainingMs));
     sequence += 1;
     await dependencies.onTrace?.({
       id: randomUUID(), runId: input.runId, sequence, toolName: call.function.name,
       arguments: dispatched.arguments, outcome: dispatched.outcome, latencyMs: dispatched.latencyMs, errorCode: dispatched.errorCode,
     });
     messages = [...messages, { role: "tool", tool_call_id: call.id, content: JSON.stringify(dispatched.result) }];
-    if (call.function.name === "finish_research") break;
+    if (call.function.name === "finish_research" || deadlineExceeded) break;
   }
 
-  return evidence;
+  if (turns === maxModelTurns) limitations.push("MODEL_TURN_BUDGET_EXHAUSTED");
+  if (now().getTime() - startedAt >= maxDurationMs) limitations.push("RUN_TIMEOUT");
+  return { evidence, limitations: [...new Set(limitations)] };
 }
 
 async function dispatchCall(
@@ -115,6 +153,7 @@ async function dispatchCall(
   dependencies: ResearchHarnessDependencies,
   evidence: Evidence[],
   now: () => Date,
+  signal: AbortSignal,
 ): Promise<{ arguments: Record<string, unknown>; outcome: ToolTrace["outcome"]; latencyMs: number | null; errorCode: string | null; result: unknown }> {
   const rawArguments = parseArguments(call.function.arguments);
   if (!rawArguments) {
@@ -134,7 +173,7 @@ async function dispatchCall(
     if (!parsed.success) {
       return { arguments: rawArguments, outcome: "error", latencyMs: null, errorCode: "INVALID_ARGUMENTS", result: { code: "INVALID_ARGUMENTS" } };
     }
-    const result = await dependencies.search.search(parsed.data);
+    const result = await dependencies.search.search(parsed.data, signal);
     if (result.outcome !== "success") {
       return { arguments: rawArguments, outcome: result.outcome, latencyMs: now().getTime() - startedAt, errorCode: result.code, result: { outcome: result.outcome, code: result.code } };
     }
@@ -148,7 +187,7 @@ async function dispatchCall(
   if (!parsed.success) {
     return { arguments: rawArguments, outcome: "error", latencyMs: null, errorCode: "INVALID_ARGUMENTS", result: { code: "INVALID_ARGUMENTS" } };
   }
-  const result = await dependencies.fetcher.extract(parsed.data.url);
+  const result = await dependencies.fetcher.extract(parsed.data.url, signal);
   if (result.outcome !== "success") {
     return { arguments: rawArguments, outcome: "partial", latencyMs: now().getTime() - startedAt, errorCode: result.code, result: { outcome: "partial", code: result.code } };
   }
@@ -157,6 +196,10 @@ async function dispatchCall(
     excerpt: result.excerpt, observations: [], roles: [], confidence: "medium", retrievedAt: now().toISOString(),
   }, input.productUrl)], evidence, dependencies);
   return { arguments: rawArguments, outcome: "success", latencyMs: now().getTime() - startedAt, errorCode: null, result: { outcome: "success", evidenceIds: added } };
+}
+
+function isTimeout(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "TimeoutError";
 }
 
 function parseArguments(value: string): Record<string, unknown> | null {

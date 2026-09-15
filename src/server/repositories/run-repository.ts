@@ -96,13 +96,12 @@ export class RunRepository {
     };
   }
 
-  async setStatus(id: string, status: RunStatus): Promise<void> {
+  async markIncomplete(id: string): Promise<void> {
     await this.database.query(
-      `UPDATE runs
-       SET status = $2,
-           completed_at = CASE WHEN $2 IN ('awaiting_approval', 'incomplete') THEN now() ELSE completed_at END
-       WHERE id = $1`,
-      [id, status],
+      `UPDATE runs SET status = 'incomplete', completed_at = now()
+       WHERE id = $1 AND status = 'validating'`,
+      [id],
     );
   }
+
 }
