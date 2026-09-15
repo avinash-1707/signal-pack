@@ -52,7 +52,7 @@ Return `429` for scoped rate limits and `503 DEMO_AT_CAPACITY` for global capaci
 
 ## Scheduled cleanup
 
-Vercel Cron invokes `POST /api/internal/purge-expired` daily with a `CRON_SECRET`. The route deletes expired `sessions` in Postgres; foreign-key cascades delete all owned records. Cleanup uses an auditable count-only log and never logs source content.
+Vercel Cron invokes `GET /api/internal/purge-expired` daily with a `CRON_SECRET`. The route deletes expired `sessions` in Postgres; foreign-key cascades delete all owned records. Cleanup uses an auditable count-only log and never logs source content.
 
 ## Release checklist
 

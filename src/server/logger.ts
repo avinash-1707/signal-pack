@@ -7,6 +7,7 @@ type LogFields = {
   outputTokens?: number;
   estimatedCostUsd?: number;
   errorCode?: string;
+  deletedSessionCount?: number;
 };
 
 type Logger = Pick<Console, "error" | "info" | "warn">;

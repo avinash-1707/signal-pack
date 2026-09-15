@@ -505,7 +505,7 @@ Deploy as one Next.js application on Vercel:
 
 - Web, route handlers, and SSE endpoint in one deployment.
 - Neon Postgres is the production database. Use local Postgres in development; do not change the data model for local mode.
-- Vercel Cron invokes `POST /api/internal/purge-expired` once daily with `CRON_SECRET` authentication.
+- Vercel Cron invokes `GET /api/internal/purge-expired` once daily with `CRON_SECRET` authentication.
 - Upstash Redis or Vercel KV stores rate-limit and active-run counters.
 - Environment variables:
 

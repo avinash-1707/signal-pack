@@ -32,4 +32,9 @@ export class SessionRepository {
   async delete(id: string): Promise<void> {
     await this.database.query("DELETE FROM sessions WHERE id = $1", [id]);
   }
+
+  async deleteExpired(now: Date): Promise<number> {
+    const result = await this.database.query("DELETE FROM sessions WHERE expires_at <= $1", [now]);
+    return result.rowCount ?? 0;
+  }
 }
