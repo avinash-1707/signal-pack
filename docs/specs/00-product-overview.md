@@ -53,7 +53,7 @@ Secondary user: a thinker-writer or creative lead who needs an evidence-backed f
 |---|---|---|
 | Web framework | Next.js 16 App Router | Fastest path to one deployable application, server routes, streaming UI, and a polished demo. |
 | Authentication | Anonymous, session-scoped public demo; no accounts | A reviewer can try the product without signup. An httpOnly signed session cookie identifies a browser for rate limits and run retrieval. |
-| Model | OpenAI Responses API with `gpt-4.1-mini` | Native strict function calling and structured outputs at low prototype cost. |
+| Model access | OpenRouter Chat Completions API | One OpenAI-compatible gateway for a configurable research model with tool calling and structured outputs. |
 | Discovery | Brave Search API | Independent search index, predictable request pricing, and public web/video/news results. |
 | Export | Google Sheets | A launch tracker is naturally row-oriented and immediately understandable in a demo. |
 | Deployment | Vercel | One deployable Next.js app with streaming support and no separate API service. |
@@ -340,5 +340,6 @@ The optional handoff should be a later phase. It must never cause a social post 
 - Social Capital about: https://www.sociallcapital.com/about
 - Social Capital Head of Growth role: https://www.sociallcapital.com/careers/head-of-growth
 - Brave Search API: https://brave.com/search/api/
-- OpenAI function calling: https://developers.openai.com/api/docs/guides/function-calling
+- OpenRouter tool calling: https://openrouter.ai/docs/guides/features/tool-calling
+- OpenRouter structured outputs: https://openrouter.ai/docs/guides/features/structured-outputs
 - Anthropic, Building Effective AI Agents: https://www.anthropic.com/engineering/building-effective-agents

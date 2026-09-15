@@ -2,7 +2,7 @@
 
 ## Decision summary
 
-Signal Pack is a single deployable Next.js 16 TypeScript application with a lightweight server-side research harness. It uses OpenAI's Responses API with `gpt-4.1-mini` and deterministic application code. It does not need Temporal, LangGraph, a vector database, or multiple agents for the MVP.
+Signal Pack is a single deployable Next.js 16 TypeScript application with a lightweight server-side research harness. It uses OpenRouter's OpenAI-compatible Chat Completions API with a configured tool-capable model and deterministic application code. It does not need Temporal, LangGraph, a vector database, or multiple agents for the MVP.
 
 Detailed implementation contracts are deliberately split out of this overview:
 
@@ -113,7 +113,7 @@ sequenceDiagram
 - Neon Postgres for runs, evidence, traces, reports, sessions, and deletion jobs.
 - Brave Search API as the primary discovery provider.
 - Direct, policy-aware HTTP extraction for permitted pages.
-- OpenAI Responses API with `gpt-4.1-mini`, strict function calling, and structured outputs.
+- OpenRouter Chat Completions API with `RESEARCH_MODEL`, tool calling, and strict JSON-schema structured outputs.
 - Google Sheets export through one service-account-owned demonstration spreadsheet.
 - Vercel for deployment and Vercel Cron for the protected deletion job.
 
@@ -292,21 +292,22 @@ async function executeRun(runId: string): Promise<void> {
   const state = await loadRunState(runId);
 
   while (canContinue(state)) {
-    const response = await model.responses.create({
-      model: env.OPENAI_RESEARCH_MODEL,
-      instructions: RESEARCH_INSTRUCTIONS,
-      input: buildResearchContext(state),
+    const response = await openRouter.chat.completions.create({
+      model: env.RESEARCH_MODEL,
+      messages: buildResearchMessages(state),
       tools: TOOL_SCHEMAS,
+      tool_choice: "auto",
       parallel_tool_calls: false,
+      provider: { require_parameters: true },
     });
 
-    const calls = response.output.filter(isFunctionCall);
+    const calls = response.choices[0]?.message.tool_calls ?? [];
     if (calls.length === 0) break;
 
     for (const call of calls) {
       const result = await dispatchToolCall(state, call);
       await saveToolCall(state.run.id, call, result);
-      state.apply(result); // Tool failures become partial outcomes, never run statuses.
+      state.apply(result); // Includes the assistant call and validated tool result for the next turn.
     }
   }
 
@@ -343,6 +344,8 @@ Do not invent metrics, engagement, customer outcomes, partnerships, pricing, or 
 ```
 
 Pass the model a compact ledger rather than full page content on every turn. Each ledger item includes ID, source type, title, excerpt, observations, roles, and confidence. This limits cost and reduces context contamination.
+
+Use OpenRouter's OpenAI-compatible Chat Completions format consistently: append each assistant tool call and its validated `tool` result before the next turn, and include the same tool definitions on every request. The final brief request uses `response_format.type: "json_schema"` with `strict: true`; application-side Zod parsing remains mandatory. Set `provider.require_parameters: true` for tool and structured-output requests so routing rejects providers that cannot honor those parameters.
 
 ## Deterministic validation
 
@@ -508,8 +511,8 @@ Deploy as one Next.js application on Vercel:
 
 ```text
 BRAVE_SEARCH_API_KEY
-OPENAI_API_KEY
-OPENAI_RESEARCH_MODEL=gpt-4.1-mini
+OPENROUTER_API_KEY
+RESEARCH_MODEL
 GOOGLE_SERVICE_ACCOUNT_JSON
 GOOGLE_SHEET_ID
 DATABASE_URL

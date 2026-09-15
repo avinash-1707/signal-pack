@@ -17,7 +17,7 @@ The product contract is already locked. A new requirement that changes product b
 
 ### Work
 
-- Create development credentials for OpenAI, Brave Search, Neon, Google Sheets, and the selected Redis/KV provider.
+- Create development credentials for OpenRouter, Brave Search, Neon, Google Sheets, and the selected Redis/KV provider. Select a research model whose OpenRouter route supports both tool calling and structured outputs.
 - Create the service-account-owned Google Sheet and share it only with the service account.
 - Prepare local Postgres, an environment template, and the Cartesia fixture path specified in [data and retention](05-data-and-retention.md).
 - Configure a Vercel project and reserve environment variables without adding secrets to version control.
@@ -79,7 +79,7 @@ Unit 1.
 
 ### Work
 
-- Implement the bounded OpenAI Responses tool loop using the schemas and budgets in [research harness](03-research-harness.md).
+- Implement the bounded OpenRouter Chat Completions tool loop using the schemas and budgets in [research harness](03-research-harness.md).
 - Persist only compact, sanitized evidence context for model compilation.
 - Implement structured three-brief compilation and one repair pass for invalid model output.
 - Implement citation, lane, normalized audience-lens, primary-evidence, required-field, and export-eligibility validation.

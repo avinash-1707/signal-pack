@@ -7,7 +7,7 @@
 | Web framework | Next.js 16 App Router |
 | Hosting | Vercel |
 | Database | Neon Postgres |
-| Model | OpenAI Responses API, `gpt-4.1-mini` |
+| Model access | OpenRouter Chat Completions API, `RESEARCH_MODEL` |
 | Search | Brave Search API |
 | Export | Google Sheets service account |
 | Rate-limit store | Upstash Redis or Vercel KV |
@@ -20,8 +20,8 @@ One Vercel deployment serves the UI, API routes, SSE endpoint, and protected dai
 
 ```text
 BRAVE_SEARCH_API_KEY
-OPENAI_API_KEY
-OPENAI_RESEARCH_MODEL=gpt-4.1-mini
+OPENROUTER_API_KEY
+RESEARCH_MODEL
 GOOGLE_SERVICE_ACCOUNT_JSON
 GOOGLE_SHEET_ID
 DATABASE_URL

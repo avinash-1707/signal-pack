@@ -29,7 +29,7 @@ Use `Not started`, `In progress`, `Blocked`, `Done`, or `Done (external checks p
 
 | Item | Status | Last updated | Notes |
 |---|---|---|---|
-| OpenAI API credentials | Not started | 2026-09-15 | Required for live research and compilation only. |
+| OpenRouter API credentials and model selection | Not started | 2026-09-15 | Required for live research and compilation only; the selected route must support tools and structured outputs. |
 | Brave Search API credentials | Not started | 2026-09-15 | Required for live discovery only. |
 | Neon Postgres database | Not started | 2026-09-15 | Required for deployed persistence. |
 | Google Sheets service account and demo sheet | Not started | 2026-09-15 | Required for live export verification. |

@@ -23,7 +23,7 @@ src/
   features/runs/       Run-focused client state and UI composition
   server/
     services/          Run, evidence, validation, approval, and export logic
-    adapters/          OpenAI, Brave, fetcher, Google Sheets, database, KV
+    adapters/          OpenRouter, Brave, fetcher, Google Sheets, database, KV
     repositories/      Database reads and writes
   schemas/             Shared Zod contracts and inferred types
   lib/                 Small environment-neutral utilities
@@ -83,6 +83,6 @@ fixtures/              Sanitized deterministic run fixtures
 
 - Prefer existing project code, platform capabilities, and installed dependencies. Add a dependency only when the standard library or a small local implementation cannot safely meet the requirement.
 - Install dependencies with `pnpm add` or `pnpm add -D`; do not manually pin a remembered version.
-- Check current official documentation before using provider SDKs, OpenAI Responses APIs, Vercel runtime features, or Google APIs.
+- Check current official documentation before using provider SDKs, OpenRouter's tool and structured-output APIs, Vercel runtime features, or Google APIs.
 - Comments explain non-obvious reasoning or a deliberate constraint, not syntax.
 - Every build-plan unit ends with a security-focused review. Fix high-severity findings before starting dependent work.
