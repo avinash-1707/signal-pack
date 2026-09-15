@@ -51,7 +51,7 @@ The product is deliberately upstream of drafting and publishing tools. It prepar
 - Autonomous publishing, campaign scheduling, payments, or full campaign management.
 - Multi-agent orchestration, browser automation, vector databases, or durable workflow infrastructure for the MVP.
 
-## Planned Stack
+## Stack
 
 | Area | Choice |
 |---|---|
@@ -66,9 +66,79 @@ The product is deliberately upstream of drafting and publishing tools. It prepar
 
 ## Status
 
-The product and implementation contracts are specified. Application code has not been created yet.
+Units 1 through 5 are implemented and covered by fixture-backed tests. Deployment hardening is in progress. The Cartesia demo is available without credentials; live provider verification and deployment need the configured services below. See the [build plan](docs/specs/07-build-plan.md) and [progress tracker](docs/progress-tracker.md) for the current execution state.
 
-The build starts with application foundation and session-safe persistence while provider credentials and deployment accounts are prepared in parallel. See the [build plan](docs/specs/07-build-plan.md) and [progress tracker](docs/progress-tracker.md) for the current execution state.
+## Setup
+
+### Run the fixture demo
+
+Requirements: Node.js 20.9 or later and Corepack. The repository pins pnpm 11 in `package.json`.
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Open `http://localhost:3000`. The default Cartesia report is a static, sanitized fixture and makes no provider calls.
+
+Run all local checks with:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+### Configure live services
+
+Copy the template and populate every value. Do not commit the resulting `.env.local` file.
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Setup requirement |
+|---|---|
+| `BRAVE_SEARCH_API_KEY` | Create a Brave Search API credential. |
+| `OPENROUTER_API_KEY` | Create an OpenRouter API key. |
+| `RESEARCH_MODEL` | Choose an OpenRouter route that supports tool calling and strict JSON-schema structured output. |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Create a service-account credential JSON and keep it server-side. |
+| `GOOGLE_SHEET_ID` | Create one demonstration spreadsheet and share it only with that service account. |
+| `DATABASE_URL` | Create a Neon Postgres database or local Postgres instance. |
+| `KV_REST_API_URL` | Create an Upstash Redis or Vercel KV REST store. |
+| `KV_REST_API_TOKEN` | Use the REST store token. |
+| `SESSION_SIGNING_SECRET` | Generate a random secret of at least 32 characters. |
+| `DEMO_EXPORT_CODE` | Set the presenter-only export unlock code. |
+| `CRON_SECRET` | Generate a separate random secret for Vercel Cron. |
+
+Apply the authoritative schema to the configured database before attempting a live run:
+
+```bash
+psql "$DATABASE_URL" -f migrations/0000_initial.sql
+```
+
+Live routes validate the complete environment before use. Start the application with `pnpm dev`, then submit a valid product URL from the intake form to begin a session-owned live run. The fixture demo and tests remain credential-free.
+
+### Deploy to Vercel
+
+1. Create a Vercel project connected to this repository.
+2. Configure every variable above in the Vercel project environment.
+3. Apply `migrations/0000_initial.sql` to the production Neon database.
+4. Deploy the application. `vercel.json` schedules `GET /api/internal/purge-expired` daily; Vercel sends the configured `CRON_SECRET` as its authorization bearer token.
+5. Exercise a permitted live run, confirm cross-session reads return `404`, and verify an approved owner-only Sheets export.
+
+The cleanup endpoint deletes expired sessions; database foreign-key cascades delete all session-owned records.
+
+### What to verify before release
+
+- The Cartesia fixture loads on desktop and mobile without credentials.
+- A live run respects robots restrictions and configured rate limits.
+- A run from another browser session returns `404`.
+- An approved run cannot export until the same session has the owner capability.
+- Reusing one export idempotency key creates one Sheets tracker write.
+- The daily Vercel Cron invocation deletes expired sessions and logs only the deletion count.
 
 ## Documentation
 
@@ -85,19 +155,6 @@ The build starts with application foundation and session-safe persistence while 
 | [Build plan](docs/specs/07-build-plan.md) | Implementation units, dependencies, and definitions of done. |
 | [Coding standards](docs/coding-standards.md) | Code organization, trust boundaries, testing, and review rules. |
 | [Progress tracker](docs/progress-tracker.md) | Live implementation and external-dependency status. |
-
-## Implementation Prerequisites
-
-The fixture-backed path can be built without provider credentials. Live research, persistence, export, and deployment require:
-
-- OpenRouter API key and a model that supports tool calling plus structured outputs
-- Brave Search API key
-- Neon Postgres database
-- Google service account with access to one demonstration spreadsheet
-- Upstash Redis or Vercel KV
-- Vercel project and Cron configuration
-
-These prerequisites are tracked in [the progress tracker](docs/progress-tracker.md).
 
 ## License
 

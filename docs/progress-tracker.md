@@ -21,7 +21,7 @@ If a change alters a product, security, retention, contract, or deployment decis
 | Unit 3: Research and brief compilation | Done (external checks pending) | 2026-09-15 | Bounded OpenRouter tool loop, strict brief compilation, validation/repair, and atomic approval-ready persistence are fixture-tested. Live OpenRouter verification awaits Unit 0 credentials. |
 | Unit 4: Research desk UI and live events | Done | 2026-09-15 | Fixture-first research desk, owner-scoped SSE snapshots, resume-safe event handling, and accessible evidence review are implemented. |
 | Unit 5: Approval and Google Sheets export | Done (external checks pending) | 2026-09-15 | Approval revalidation, session-bound presenter unlock, idempotent export reservation, fixture payload mapping, and the accessible UI flow are implemented. Live Sheets verification requires service-account setup. |
-| Unit 6: Deployment, hardening, and demo | Not started | 2026-09-15 | Depends on all previous units. |
+| Unit 6: Deployment, hardening, and demo | In progress | 2026-09-15 | Local cleanup, Cron, CI, and fixture verification are implemented; live deployment and provider checks await Unit 0 accounts and credentials. |
 
 Use `Not started`, `In progress`, `Blocked`, `Done`, or `Done (external checks pending)`. A unit is not `Done` until its build-plan definition of done has been verified.
 
@@ -59,6 +59,15 @@ Add entries newest first.
 **Verification:** `pnpm lint`, `pnpm typecheck`, and `pnpm test` (32 tests) passed. Fixture tests make no Google or other provider calls.
 **Spec impact:** Updated `docs/specs/04-api-contracts.md` with the deterministic Sheets tracker-row mapping.
 **Follow-ups:** Configure the service account, share only the demonstration spreadsheet with it, and exercise a live owner-only export before deployment.
+
+### [2026-09-15] Deployment hardening started
+**Unit:** Unit 6: Deployment, hardening, and demo
+**Type:** Progress update
+**Summary:** Added a timing-safe, bearer-protected daily session-retention purge endpoint. It uses the existing session deletion primitive so database foreign-key cascades remove all owned records, writes only an auditable deletion count, and is scheduled by Vercel Cron. The endpoint accepts Vercel's `GET` invocation as well as authenticated manual `POST` requests. Added GitHub Actions checks for linting, typechecking, fixture tests, migration validation through the test suite, and production build. The README now documents fixture development, all live-provider configuration, schema application, and release verification.
+**Files/areas touched:** `src/app/api/internal/`, `src/server/services/`, `src/server/repositories/`, `vercel.json`, `.github/workflows/ci.yml`, `README.md`, `tests/`
+**Verification:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (35 tests), `pnpm build`, and `vercel.json` JSON validation passed. Live provider and deployed checks cannot run without Unit 0 accounts and credentials.
+**Spec impact:** None; implementation follows the existing deployment and retention contracts.
+**Follow-ups:** Configure all Unit 0 accounts, deploy to Vercel, exercise a permitted live run and owner-only export, and verify the scheduled production cleanup.
 
 ### [2026-09-15] Research desk UI and live events completed
 **Unit:** Unit 4: Research desk UI and live events

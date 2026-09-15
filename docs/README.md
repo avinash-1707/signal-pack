@@ -2,6 +2,12 @@
 
 This directory separates durable product specifications from the documents that govern implementation work.
 
+## Start Here
+
+- Read the repository [README](../README.md) to install dependencies, run the fixture demo, configure live services, and deploy.
+- Read [coding standards](coding-standards.md) before changing application code.
+- Check the [progress tracker](progress-tracker.md) for implemented work and external blockers.
+
 ## Specifications
 
 | Document | Source of truth for |
